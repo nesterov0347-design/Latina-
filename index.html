@@ -1,0 +1,1572 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1d6b75">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Latina">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Latina medica — карточки</title>
+<style>
+  :root {
+    --bg: #eef3f4;
+    --surface: #fbfdfd;
+    --ink: #15262d;
+    --muted: #5d7077;
+    --line: #cddadd;
+    --accent: #1d6b75;
+    --accent-ink: #ffffff;
+    --good: #2c7a4b;
+    --bad: #b3363c;
+    --serif: "Spectral", "Georgia", "Times New Roman", serif;
+    --sans: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1a1e; --surface: #17262b; --ink: #e6eef0; --muted: #8fa3aa;
+      --line: #2a3d44; --accent: #5cb6c2; --accent-ink: #0b1519; --good: #6cc48f; --bad: #ef7f84;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1a1e; --surface: #17262b; --ink: #e6eef0; --muted: #8fa3aa;
+    --line: #2a3d44; --accent: #5cb6c2; --accent-ink: #0b1519; --good: #6cc48f; --bad: #ef7f84;
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--sans); font-size: 16px; line-height: 1.5;
+  }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 20px 16px 48px; }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+  h1 { font-family: var(--serif); font-weight: 600; font-size: 1.5rem; margin: 0; letter-spacing: .01em; }
+  .stats { color: var(--muted); font-size: .875rem; text-align: right; }
+  nav { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 20px; }
+  nav button {
+    flex: 1; background: none; border: 0; border-bottom: 3px solid transparent;
+    padding: 10px 4px; font: inherit; font-weight: 500; color: var(--muted); cursor: pointer;
+  }
+  nav button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+  button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, .card:focus-visible {
+    outline: 3px solid var(--accent); outline-offset: 2px;
+  }
+
+  .dir { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: .875rem; color: var(--muted); }
+  .dir select { font: inherit; font-size: .875rem; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; max-width: 60%; }
+  .dir button { background: none; border: 1px solid var(--line); color: var(--ink); border-radius: 999px; padding: 4px 12px; font: inherit; font-size: .875rem; cursor: pointer; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+    min-height: 260px; padding: 28px 22px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center; cursor: pointer;
+    box-shadow: 0 1px 0 var(--line), 0 12px 24px -18px rgba(10, 30, 36, .35);
+    perspective: 800px;
+  }
+  .card .main { font-family: var(--serif); font-size: clamp(2rem, 9vw, 2.75rem); font-weight: 600; line-height: 1.15; overflow-wrap: anywhere; }
+  .card .main.long { font-size: clamp(1.35rem, 6vw, 1.85rem); }
+  .card .main.ru { font-family: var(--sans); font-size: clamp(1.5rem, 7vw, 2rem); font-weight: 500; }
+  .card .info { margin-top: 10px; font-family: var(--serif); font-style: italic; font-size: 1.15rem; color: var(--muted); }
+  .card .sub { margin-top: 18px; padding-top: 14px; border-top: 1px dashed var(--line); width: 100%; max-width: 320px; }
+  .card .sub .la { font-family: var(--serif); font-weight: 600; font-size: 1.25rem; }
+  .card .hint { margin-top: 22px; font-size: .8125rem; color: var(--muted); }
+  .card.flip { animation: flip .28s ease; }
+  @keyframes flip { from { transform: rotateX(70deg); opacity: .4; } to { transform: rotateX(0); opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .card.flip { animation: none; } }
+
+  .answers { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+  .btn {
+    font: inherit; font-weight: 600; border-radius: 12px; padding: 14px 12px; cursor: pointer;
+    border: 2px solid var(--line); background: var(--surface); color: var(--ink);
+  }
+  .btn.good { border-color: var(--good); color: var(--good); }
+  .btn.bad { border-color: var(--bad); color: var(--bad); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .btn[disabled] { opacity: .45; cursor: default; }
+  .progress { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; margin-bottom: 14px; }
+  .progress > div { height: 100%; background: var(--accent); width: 0; transition: width .2s; }
+  .kbd { margin-top: 14px; text-align: center; color: var(--muted); font-size: .8125rem; }
+
+  .empty { text-align: center; padding: 36px 8px; }
+  .empty h2 { font-family: var(--serif); margin: 0 0 8px; font-size: 1.5rem; }
+  .empty p { color: var(--muted); margin: 0 0 18px; }
+  .empty .btn { margin: 4px; }
+
+  section.panel { margin-bottom: 28px; }
+  h2.sec { font-family: var(--serif); font-size: 1.2rem; margin: 0 0 10px; }
+  label { display: block; font-size: .875rem; color: var(--muted); margin: 10px 0 4px; }
+  input[type=text], textarea {
+    width: 100%; font: inherit; color: var(--ink); background: var(--surface);
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+  }
+  textarea { min-height: 110px; resize: vertical; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .help { font-size: .8125rem; color: var(--muted); margin: 6px 0 10px; }
+  .list { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); overflow: hidden; }
+  .item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  .item:last-child { border-bottom: 0; }
+  .item .t { flex: 1; min-width: 0; }
+  .item .t b { font-family: var(--serif); font-size: 1.05rem; }
+  .item .t i { font-family: var(--serif); color: var(--muted); }
+  .item .t div { color: var(--muted); font-size: .875rem; overflow-wrap: anywhere; }
+  .item .box { font-size: .75rem; color: var(--muted); white-space: nowrap; }
+  .item button { background: none; border: 0; color: var(--bad); cursor: pointer; font: inherit; font-size: .875rem; padding: 6px; }
+  .danger { background: none; border: 0; color: var(--muted); text-decoration: underline; font: inherit; font-size: .875rem; cursor: pointer; padding: 6px 0; }
+  .msg { font-size: .875rem; color: var(--good); min-height: 1.2em; margin-top: 6px; }
+  .msg.err { color: var(--bad); }
+  .card.static { cursor: default; }
+  .verdict { font-weight: 600; margin-bottom: 10px; }
+  .verdict.good { color: var(--good); }
+  .verdict.bad { color: var(--bad); }
+  .x { color: var(--bad); text-decoration: underline wavy; text-underline-offset: 4px; }
+  .m { color: var(--good); font-weight: 600; text-decoration: underline; text-underline-offset: 4px; }
+  .cmp { font-family: var(--serif); font-size: 1.5rem; margin: 4px 0 10px; overflow-wrap: anywhere; }
+  .cmp small { display: block; font-family: var(--sans); font-size: .8125rem; color: var(--muted); }
+  input.spin { margin-top: 14px; font-family: var(--serif); font-size: 1.5rem; text-align: center; padding: 14px 12px; }
+  .check { display: flex; gap: 8px; align-items: center; cursor: pointer; margin: 0; font-size: .875rem; }
+  .dir label.check { color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Latina medica</h1>
+    <div class="stats" id="stats"></div>
+  </header>
+  <nav role="tablist">
+    <button role="tab" id="tab-study" aria-selected="true">Учить</button>
+    <button role="tab" id="tab-spell" aria-selected="false">Писать</button>
+    <button role="tab" id="tab-deck" aria-selected="false">Мои слова</button>
+  </nav>
+  <main id="view"></main>
+</div>
+
+<script>
+(function () {
+  var KEY = "latin-cards-v1";
+  var DAY = 86400000;
+  var INTERVALS = [0, 1, 3, 7, 14]; // дни для коробок 0..4
+  var MAX_BOX = INTERVALS.length - 1;
+
+  var OLD_STARTER = [
+    ["caput", "capitis, n", "голова"], ["collum", "colli, n", "шея"], ["truncus", "trunci, m", "туловище"],
+    ["cor", "cordis, n", "сердце"], ["pulmo", "pulmonis, m", "лёгкое"], ["hepar", "hepatis, n", "печень"],
+    ["ren", "renis, m", "почка"], ["os", "ossis, n", "кость"], ["musculus", "musculi, m", "мышца"],
+    ["vena", "venae, f", "вена"], ["arteria", "arteriae, f", "артерия"], ["nervus", "nervi, m", "нерв"],
+    ["cutis", "cutis, f", "кожа"], ["dens", "dentis, m", "зуб"], ["oculus", "oculi, m", "глаз"],
+    ["auris", "auris, f", "ухо"], ["nasus", "nasi, m", "нос"], ["lingua", "linguae, f", "язык"],
+    ["sanguis", "sanguinis, m", "кровь"], ["cerebrum", "cerebri, n", "головной мозг"],
+    ["articulatio", "articulationis, f", "сустав"], ["ventriculus", "ventriculi, m", "желудок; желудочек"],
+    ["dexter", "dextra, dextrum", "правый"], ["sinister", "sinistra, sinistrum", "левый"],
+    ["magnus", "magna, magnum", "большой"], ["parvus", "parva, parvum", "малый"]
+  ];
+
+  var LESSONS = [
+    ["I сем · занятие 1", [
+      ["ala", "ae, f", "крыло"],
+      ["apertura", "ae, f", "отверстие (грудной клетки и таза)"],
+      ["bursa", "ae, f", "сумка"],
+      ["capsula", "ae, f", "капсула, оболочка"],
+      ["clavicula", "ae, f", "ключица"],
+      ["columna", "ae, f", "столб, колонна"],
+      ["costa", "ae, f", "ребро"],
+      ["crista", "ae, f", "гребень"],
+      ["eminentia", "ae, f", "выступ, возвышение"],
+      ["fascia", "ae, f", "фасция, оболочка мышц"],
+      ["fissura", "ae, f", "трещина, щель, борозда"],
+      ["fossa", "ae, f", "яма, ров, углубление"],
+      ["fossula", "ae, f", "ямка, небольшое углубление"],
+      ["fovea", "ae, f", "ямка"],
+      ["fractura", "ae, f", "перелом"],
+      ["glandula", "ae, f", "железа"],
+      ["incisura", "ae, f", "вырезка"],
+      ["lamina", "ae, f", "пластинка"],
+      ["linea", "ae, f", "линия, строчка"],
+      ["lingua", "ae, f", "язык"],
+      ["mandibula", "ae, f", "нижняя челюсть"],
+      ["maxilla", "ae, f", "верхняя челюсть"],
+      ["medulla", "ae, f", "мозг (спинной, костный)"],
+      ["prominentia", "ae, f", "выступ"],
+      ["scapula", "ae, f", "лопатка"],
+      ["squama", "ae, f", "чешуя"],
+      ["spina", "ae, f", "ость, гребень"],
+      ["sutura", "ae, f", "шов"],
+      ["substantia", "ae, f", "вещество"],
+      ["trochlea", "ae, f", "блок"],
+      ["vertebra", "ae, f", "позвонок"],
+      ["vesica", "ae, f", "пузырь"]
+    ]],
+    ["I сем · занятие 2", [
+      ["angulus", "i, m", "угол"],
+      ["canaliculus", "i, m", "небольшой канал"],
+      ["fundus", "i, m", "дно"],
+      ["musculus", "i, m", "мышца"],
+      ["nervus", "i, m", "нерв"],
+      ["oculus", "i, m", "глаз"],
+      ["radius", "i, m", "лучевая кость"],
+      ["nasus", "i, m", "нос"],
+      ["sulcus", "i, m", "борозда"],
+      ["capitulum", "i, n", "головка"],
+      ["cavum", "i, n", "полость"],
+      ["cerebrum", "i, n", "головной мозг"],
+      ["collum", "i, n", "шейка, шея"],
+      ["cranium", "i, n", "череп"],
+      ["ganglion", "ii, n", "нервный узел"],
+      ["intestinum", "i, n", "кишка"],
+      ["labium", "ii, n", "губа"],
+      ["ligamentum", "i, n", "связка"],
+      ["membrum", "i, n", "конечность, часть тела"],
+      ["septum", "i, n", "перегородка"],
+      ["stratum", "i, n", "слой, пласт"],
+      ["sternum", "i, n", "грудина"],
+      ["tuberculum", "i, n", "бугорок"],
+      ["arcus", "us, m", "дуга"],
+      ["ductus", "us, m", "проток"],
+      ["hiatus", "us, m", "щель, зияние"],
+      ["meatus", "us, m", "ход, проход"],
+      ["plexus", "us, m", "сплетение"],
+      ["processus", "us, m", "отросток"],
+      ["recessus", "us, m", "впадина, углубление"],
+      ["sensus", "us, m", "чувство, ощущение"],
+      ["sinus", "us, m", "пазуха, полость"],
+      ["cornu", "us, n", "рог, рожок"],
+      ["genu", "us, n", "колено"],
+      ["facies", "ei, f", "лицо, поверхность"],
+      ["res", "ei, f", "дело, вещь, материал, предмет"],
+      ["series", "ei, f", "ряд"],
+      ["superficies", "ei, f", "поверхность, верхняя сторона"]
+    ]],
+    ["I сем · занятие 3", [
+      ["acusticus", "a, um", "слуховой"],
+      ["acutus", "a, um", "острый"],
+      ["albus", "a, um", "белый"],
+      ["caroticus", "a, um", "сонный"],
+      ["coccygeus", "a, um", "копчиковый"],
+      ["compactus", "a, um", "компактный, плотный"],
+      ["coracoideus", "a, um", "клювовидный"],
+      ["dexter", "tra, trum", "правый"],
+      ["externus", "a, um", "наружный"],
+      ["flavus", "a, um", "жёлтый"],
+      ["intermedius", "a, um", "промежуточный"],
+      ["internus", "a, um", "внутренний"],
+      ["latus", "a, um", "широкий"],
+      ["laesus", "a, um", "нарушенный, повреждённый"],
+      ["longus", "a, um", "длинный"],
+      ["medicatus", "a, um", "лечебный, целебный"],
+      ["medianus", "a, um", "срединный, лежащий на средней линии тела"],
+      ["medius", "a, um", "средний"],
+      ["nutritius", "a, um", "питательный"],
+      ["obliquus", "a, um", "косой"],
+      ["obturatorius", "a, um", "запирающий"],
+      ["palatinus", "a, um", "нёбный"],
+      ["petrosus", "a, um", "каменистый"],
+      ["profundus", "a, um", "глубокий"],
+      ["pterygoideus", "a, um", "крыловидный"],
+      ["sigmoideus", "a, um", "сигмовидный"],
+      ["sinister", "tra, trum", "левый"],
+      ["spongiosus", "a, um", "губчатый"],
+      ["spinosus", "a, um", "остистый"],
+      ["spurius", "a, um", "ложный"],
+      ["styloideus", "a, um", "шиловидный"],
+      ["squamosus", "a, um", "чешуйчатый"],
+      ["thoracicus", "a, um", "грудной"],
+      ["transversus", "a, um", "поперечный"],
+      ["verus", "a, um", "истинный"],
+      ["zygomaticus", "a, um", "скуловой"],
+      ["osseus", "a, um", "костный"],
+      ["pancreaticus", "a, um", "поджелудочный"],
+      ["mucosus", "a, um", "слизистый"],
+      ["purulentus", "a, um", "гнойный"]
+    ]],
+    ["I сем · занятие 4", [
+      ["apex", "icis, m", "верхушка"],
+      ["Atlas", "ntis, m", "атлант, первый шейный позвонок"],
+      ["articulatio", "onis, f", "сустав"],
+      ["extremitas", "atis, f", "конец, конечность"],
+      ["canalis", "is, m", "канал"],
+      ["homo", "inis, m", "человек"],
+      ["margo", "inis, m", "край"],
+      ["paries", "etis, m", "стенка"],
+      ["pes", "pedis, m", "стопа"],
+      ["pulmo", "onis, m", "лёгкое"],
+      ["trochanter", "eris, m", "вертел"],
+      ["vomer", "eris, m", "сошник"],
+      ["basis", "is, f", "основание"],
+      ["cartilago", "inis, f", "хрящ"],
+      ["cervix", "icis, f", "шея"],
+      ["cortex", "icis, m", "кора"],
+      ["frons", "ntis, f", "лоб"],
+      ["impressio", "onis, f", "вдавление"],
+      ["pars", "partis, f", "часть"],
+      ["regio", "onis, f", "область"],
+      ["tuberositas", "atis, f", "бугристость"],
+      ["caput", "itis, n", "голова"],
+      ["corpus", "oris, n", "тело"],
+      ["crus", "uris, n", "голень, ножка"],
+      ["femur", "oris, n", "бедро"],
+      ["foramen", "inis, n", "отверстие"],
+      ["os", "oris, n", "рот, устье"],
+      ["os", "ossis, n", "кость"],
+      ["tuber", "eris, n", "бугор"],
+      ["cadaver", "eris, n", "труп"]
+    ]],
+    ["I сем · занятие 5", [
+      ["articularis", "e", "суставной"],
+      ["basilaris", "e", "основной"],
+      ["brevis", "e", "короткий"],
+      ["buccalis", "e", "щёчный"],
+      ["caudalis", "e", "хвостовой"],
+      ["cervicalis", "e", "шейный"],
+      ["communis", "e", "общий"],
+      ["coronalis", "e", "венечный"],
+      ["cranialis", "e", "черепной"],
+      ["distalis", "e", "удалённый"],
+      ["dorsalis", "e", "спинной, тыльный"],
+      ["frontalis", "e", "лобный"],
+      ["jugularis", "e", "ярёмный"],
+      ["lateralis", "e", "боковой"],
+      ["longitudinalis", "e", "продольный"],
+      ["medialis", "e", "срединный, медиальный"],
+      ["mentalis", "e", "подбородочный; умственный, психический"],
+      ["nasalis", "e", "носовой"],
+      ["occipitalis", "e", "затылочный"],
+      ["proximalis", "e", "приближенный, ближайший к туловищу"],
+      ["sacralis", "e", "крестцовый"],
+      ["sagittalis", "e", "стреловидный"],
+      ["superficialis", "e", "поверхностный"],
+      ["transversalis", "e", "поперечный"],
+      ["ventralis", "e", "брюшной"]
+    ]],
+    ["I сем · занятие 6", [
+      ["superior", "ius", "верхний"],
+      ["inferior", "ius", "нижний"],
+      ["anterior", "ius", "передний"],
+      ["posterior", "ius", "задний"],
+      ["major", "majus", "больший, большой"],
+      ["minor", "minus", "малый"]
+    ]],
+    ["I сем · занятие 8", [
+      ["amarus", "a, um", "горький"],
+      ["ampulla", "ae, f", "ампула"],
+      ["aqua", "ae, f", "вода"],
+      ["cellula", "ae, f", "клетка, клеточка"],
+      ["Chamomilla", "ae, f", "ромашка"],
+      ["charta", "ae, f", "бумага"],
+      ["concha", "ae, f", "раковина"],
+      ["cornea", "ae, f", "роговица, роговая оболочка глаза"],
+      ["fibula", "ae, f", "малая берцовая кость"],
+      ["Glycyrrhiza", "ae, f", "солодка"],
+      ["gutta", "ae, f", "капля"],
+      ["herba", "ae, f", "трава"],
+      ["massa pilularum", "", "пилюльная масса"],
+      ["orbita", "ae, f", "глазница"],
+      ["patella", "ae, f", "надколенник"],
+      ["pilula", "ae, f", "пилюля"],
+      ["planta", "ae, f", "1) растение; 2) подошва"],
+      ["pneumonia", "ae, f", "воспаление лёгких"],
+      ["resistentia", "ae, f", "сопротивляемость, устойчивость"],
+      ["retina", "ae, f", "сетчатка"],
+      ["substantia", "ae, f", "вещество"],
+      ["tabuletta", "ae, f", "таблетка"],
+      ["tibia", "ae, f", "большая берцовая кость"],
+      ["ulna", "ae, f", "локтевая кость"],
+      ["valvula", "ae, f", "заслонка"],
+      ["vena portae", "", "воротная вена"],
+      ["dies", "ei, m", "день"],
+      ["caries", "ei, f", "кариес"],
+      ["rabies", "ei, f", "бешенство"],
+      ["scabies", "ei, f", "чесотка"],
+      ["species", "ei, f", "сбор; в фармации употребляется только во множ. числе"],
+      ["species antiasthmaticae", "", "противоастматический сбор"],
+      ["species aromaticae", "", "ароматический сбор"],
+      ["species diaphoreticae", "", "потогонный сбор"],
+      ["species laxantes", "", "слабительный сбор"],
+      ["species sedativae", "", "успокаивающий сбор"],
+      ["species pectorales", "", "грудной сбор"]
+    ]],
+    ["I сем · занятие 9", [
+      ["curo", "avi, atum, are", "лечить, заботиться"],
+      ["sanare", "", "лечить, оздоровлять"],
+      ["auscultare", "", "выслушивать"],
+      ["signare", "", "обозначать"],
+      ["dare", "", "выдавать"],
+      ["praeparare", "", "приготовлять"],
+      ["intrare", "", "входить"],
+      ["misceo", "miscui, mixtum, ere", "смешивать"],
+      ["habere", "", "иметь"],
+      ["iungo", "iunxi, iunctum, ere", "соединять"],
+      ["solvere", "", "растворять"],
+      ["recipere", "", "брать"],
+      ["dividere", "", "делить"],
+      ["extrahere", "", "извлекать, удалять"],
+      ["audire", "", "слушать"],
+      ["linire", "", "смазывать"],
+      ["esse", "", "быть, находиться (неправильный глагол)"],
+      ["est", "", "глагол-связка (ед.ч.)"],
+      ["sunt", "", "глагол-связка (множ.ч.)"],
+      ["tinctura", "ae, f", "настойка"],
+      ["Althaea", "ae, f", "алтей"],
+      ["Belladonna", "ae, f", "красавка"],
+      ["Camphora", "ae, f", "камфора"],
+      ["Convallaria", "ae, f", "ландыш"],
+      ["Ephedra", "ae, f", "эфедра, хвойник"],
+      ["Mentha", "ae, f", "мята"],
+      ["Schizandra", "ae, f", "лимонник"],
+      ["Aloë", "es, f", "алоэ"],
+      ["Hippophaë", "es, f", "облепиха"],
+      ["chinensis", "e", "китайский"],
+      ["aethereus", "a, um", "эфирный"],
+      ["destillatus", "a, um", "дистиллированный"],
+      ["piperitus", "a, um", "перечный"],
+      ["tritus", "a, um", "тёртый"],
+      ["ana", "", "по"],
+      ["cito", "", "быстро"],
+      ["citissime", "", "как можно быстрее"],
+      ["statim", "", "немедленно"]
+    ]],
+    ["I сем · занятие 10", [
+      ["cancer", "cri, m", "рак"],
+      ["esophagus", "i, m", "пищевод"],
+      ["humerus", "i, m", "плечо"],
+      ["lobus", "i, m", "доля"],
+      ["medicus", "i, m", "врач"],
+      ["morbus", "i, m", "болезнь"],
+      ["nasus", "i, m", "нос"],
+      ["numerus", "i, m", "число"],
+      ["oculus", "i, m", "глаз"],
+      ["porus", "i, m", "пора, отверстие"],
+      ["ramus", "i, m", "ветвь"],
+      ["sirupus", "i, m", "сироп"],
+      ["truncus", "i, m", "ствол, туловище"],
+      ["ventriculus", "i, m", "1) желудок; 2) желудочек"],
+      ["bolus", "i, f", "1) глина; 2) болюс (крупная пилюля массой более 0,5 г.)"],
+      ["periodus", "i, f", "период"],
+      ["acidum", "i, n", "кислота"],
+      ["frenulum", "i, n", "уздечка"],
+      ["ileum", "i, n", "подвздошная кишка"],
+      ["manubrium", "i, n", "рукоятка"],
+      ["oleum", "i, n", "масло"],
+      ["oleum Ricini", "", "касторовое масло"],
+      ["ostium", "i, n", "вход, отверстие, устье"],
+      ["spatium", "i, n", "пространство"],
+      ["tympanum", "i, n", "барабан"],
+      ["vestibulum", "i, n", "преддверие"],
+      ["virus", "i, n", "вирус"],
+      ["acetylsalicylicus", "a, um", "ацетилсалициловый"],
+      ["aegrotus", "a, um", "больной"],
+      ["dilutus", "a, um", "разбавленный"],
+      ["hydrochloricus", "a, um", "соляный, хлористоводородный"],
+      ["Hyoscyamus", "i, m", "белена"],
+      ["Ichthyolum", "i, n", "ихтиол"],
+      ["Paracetamolum", "i, n", "парацетамол"],
+      ["Pepsinum", "i, n", "пепсин"],
+      ["Strophanthus", "i, m", "строфант"],
+      ["Strychnus", "i, m", "чилибуха"]
+    ]],
+    ["I сем · занятие 11", [
+      ["antidotum", "i, n", "противоядие"],
+      ["atrium", "ii, n", "предсердие"],
+      ["cerebellum", "i, n", "мозжечок"],
+      ["decoctum", "i, n", "отвар"],
+      ["dorsum", "i, n", "спина, спинка"],
+      ["duodenum", "i, n", "двенадцатиперстная кишка"],
+      ["emplastrum", "i, n", "пластырь"],
+      ["emulsum", "i, n", "эмульсия"],
+      ["extractum", "i, n", "экстракт"],
+      ["folium", "ii, n", "лист"],
+      ["jejunum", "i, n", "тощая кишка"],
+      ["infusum", "i, n", "настой"],
+      ["linimentum", "i, n", "линимент, жидкая мазь"],
+      ["medicamentum", "i, n", "лекарство"],
+      ["mesenterium", "ii, n", "брыжейка"],
+      ["omentum", "i, n", "сальник"],
+      ["periosteum", "i, n", "надкостница"],
+      ["peritoneum", "i, n", "брюшина"],
+      ["rectum", "i, n", "прямая кишка"],
+      ["remedium", "ii, n", "средство"],
+      ["serum", "i, n", "сыворотка"],
+      ["suppositorium", "i, n", "свеча, суппозиторий"],
+      ["unguentum", "i, n", "мазь"],
+      ["venenum", "i, n", "яд"],
+      ["oleum Persicorum", "", "персиковое масло"],
+      ["oleum Terebinthinae", "", "скипидар, терпентинное масло"],
+      ["Hydrargyrum", "i, n", "ртуть"],
+      ["Zincum", "i, n", "цинк"],
+      ["fluidus", "a, um", "жидкий (экстракт)"],
+      ["iliacus", "a, um", "подвздошный"],
+      ["mollis", "e", "мягкий"],
+      ["palatoglossus", "a, um", "нёбно-язычный"],
+      ["rectus", "a, um", "прямой"],
+      ["thyreoideus", "a, um", "щитовидный"],
+      ["Detur", "", "Выдать. Пусть будет выдано."],
+      ["fiat", "", "пусть образуется"],
+      ["fiant", "", "пусть образуются"],
+      ["ut", "", "чтобы"],
+      ["Misceatur", "", "Смешать. Пусть будет смешано."],
+      ["Signetur", "", "Обозначить. Пусть будет обозначено."],
+      ["Sterilisetur!", "", "Простерилизовать! Пусть будет простерилизовано!"]
+    ]],
+    ["I сем · занятие 12", [
+      ["abscessus", "us, m", "абсцесс, нарыв"],
+      ["acus", "us, f", "игла"],
+      ["collapsus", "us, m", "коллапс, острая сосудистая недостаточность"],
+      ["cortex", "icis, m", "кора"],
+      ["fetus", "us, m", "зародыш"],
+      ["fructus", "us, m", "плод (растение)"],
+      ["habitus", "us, m", "внешний вид, телосложение, привычка"],
+      ["manus", "us, f", "рука, кисть"],
+      ["partus", "us, m", "роды"],
+      ["partus maturus", "", "срочные роды"],
+      ["partus praematurus", "", "преждевременные роды"],
+      ["prolapsus", "us, m", "выпадение"],
+      ["pulsus", "us, m", "пульс"],
+      ["Quercus", "us, f", "дуб"],
+      ["situs", "us, m", "расположение"],
+      ["spiritus", "us, m", "спирт"],
+      ["textus", "us, m", "ткань"],
+      ["Aethylmorphinum", "i, n", "этилморфин"],
+      ["Anaesthesinum", "i, n", "анестезин"],
+      ["Chloroformium", "ii, n", "хлороформ"],
+      ["Glycerinum", "i, n", "глицерин"],
+      ["Phenolum", "i, n", "фенол"],
+      ["Pyridoxinum", "i, n", "пиридоксин"],
+      ["Riboflavinum", "i, n", "рибофлавин"],
+      ["Thiaminum", "i, n", "тиамин"],
+      ["aethylicus", "a, um", "этиловый"],
+      ["boricus", "a, um", "борный"],
+      ["camphoratus", "a, um", "камфорный"],
+      ["compositus", "a, um", "сложный"],
+      ["diureticus", "a, um", "мочегонный"],
+      ["felleus", "a, um", "желчный"],
+      ["laryngeus", "a, um", "гортанный"],
+      ["mastoideus", "a, um", "сосцевидный"],
+      ["pharyngeus", "a, um", "глоточный"],
+      ["rectificatus", "a, um", "очищенный"],
+      ["salicylicus", "a, um", "салициловый"],
+      ["trapezoideus", "a, um", "трапециевидный"]
+    ]],
+    ["I сем · занятие 13", [
+      ["caninus", "a, um", "собачий"],
+      ["hyoideus", "a, um", "подъязычный (кость)"],
+      ["hypoglossus", "a, um", "подъязычный (нерв)"],
+      ["incisivus", "a, um", "резцовый"],
+      ["mucosus", "a, um", "слизистый"],
+      ["digitus", "i, m", "палец"],
+      ["Hyoscyamus", "i, m", "белена"],
+      ["Methylii salicylas", "atis, m", "метилсалицилат"],
+      ["Oleandomycinum", "i, n", "олеандомицин"],
+      ["Oxacillinum-natrium", "i, n", "оксациллин-натрий"]
+    ]],
+    ["II сем · занятие 1", [
+      ["abductor", "oris, m", "отводящая мышца"],
+      ["adductor", "oris, m", "приводящая мышца"],
+      ["depressor", "oris, m", "опускающая мышца"],
+      ["levator", "oris, m", "поднимающая мышца"],
+      ["extensor", "oris, m", "разгибающая мышца"],
+      ["flexor", "oris, m", "сгибающая мышца"],
+      ["aether", "eris, m", "эфир"],
+      ["auctor", "oris, m", "автор"],
+      ["bromidum", "i, m", "бромид"],
+      ["calor", "oris, m", "жар"],
+      ["carbo", "oris, m", "уголь"],
+      ["chlorali hydras", "atis, m", "хлоралгидрат"],
+      ["cor", "cordis, n", "сердце"],
+      ["cortex", "icis, m", "кора"],
+      ["dolor", "oris, m", "боль"],
+      ["index", "icis, m", "указательный палец"],
+      ["pollex", "icis, m", "большой палец руки"],
+      ["hallux", "ucis, m", "большой палец стопы"],
+      ["humor", "oris, m", "влага, жидкость как составная часть тела"],
+      ["liquor", "oris, m", "жидкость"],
+      ["liquor Ammonii anisatus", "", "нашатырно-анисовые капли"],
+      ["liquor Ammonii caustici", "", "нашатырный спирт"],
+      ["rubor", "oris, m", "краснота"],
+      ["stapes", "adis, m", "стремя (стременная слуховая косточка)"],
+      ["tumor", "oris, m", "опухоль, припухлость"],
+      ["ureter", "eris, m", "мочеточник"],
+      ["venter", "tris, m", "брюшко, живот"],
+      ["Kalium", "i, n", "калий"],
+      ["Natrium", "i, n", "натрий"],
+      ["Papaver", "eris, n", "мак"],
+      ["Piper", "eris, n", "перец"]
+    ]],
+    ["II сем · занятие 2", [
+      ["auscultatio", "onis, f", "выслушивание, аускультация"],
+      ["extractio", "onis, f", "извлечение"],
+      ["impressio", "onis, f", "вдавливание"],
+      ["injectio", "onis, f", "инъекции, вливание"],
+      ["palpatio", "onis, f", "пальпация, прощупывание"],
+      ["percussio", "onis, f", "перкуссия, простукивание"],
+      ["remissio", "onis, f", "затухание, ослабление"],
+      ["secretio", "onis, f", "выделение, отделение"],
+      ["solutio", "onis, f", "раствор"],
+      ["transfusio", "onis, f", "переливание"],
+      ["appendix", "icis, f", "1) червеобразный отросток слепой кишки; 2) придаток, отросток"],
+      ["carotis", "idis, f", "сонная артерия"],
+      ["cavitas", "atis, f", "впадина, полость (= cavum, i, n)"],
+      ["extremitas", "atis, f", "конец (только длинных органов)"],
+      ["iris", "idis, f", "радужка, радужная оболочка глаза"],
+      ["lens", "lentis, f", "хрусталик"],
+      ["meninx", "ngis, f", "мозговая оболочка"],
+      ["mucilago", "inis, f", "слизь"],
+      ["parotis", "idis, f", "околоушная железа"],
+      ["phalanx", "ngis, f", "фаланга"],
+      ["pix", "cis, f", "смола"],
+      ["pix liquida", "", "дёготь"],
+      ["radix", "icis, f", "корень"],
+      ["axis", "is, m", "1) ось 2) второй шейный позвонок"],
+      ["benzoas", "atis, m", "бензоат"],
+      ["coccyx", "ygis, m", "копчик"],
+      ["dens", "dentis, m", "зуб"],
+      ["fornix", "icis, m", "свод"],
+      ["larynx", "yngis, m", "гортань"],
+      ["pharynx", "yngis, m", "глотка"],
+      ["phosphas", "atis, m", "фосфат"],
+      ["pulvis", "eris, m", "порошок"],
+      ["sanguis", "inis, m", "кровь"],
+      ["tendo", "inis, m", "сухожилие"],
+      ["thorax", "acis, m", "грудная клетка"],
+      ["pancreas", "atis, n", "поджелудочная железа"],
+      ["vas", "vasis, n", "сосуд"],
+      ["linimentum", "i, n", "жидкая мазь"],
+      ["saccharum", "i, n", "сахар"],
+      ["Digitalis", "is, f", "наперстянка"],
+      ["Helianthus", "i, m", "подсолнечник"],
+      ["Thermopsis", "idis, f", "термопсис"]
+    ]],
+    ["II сем · занятие 3", [
+      ["abdomen", "inis, n", "живот"],
+      ["Adonis", "idis, m", "горицвет"],
+      ["alumen", "inis, n", "квасцы"],
+      ["animal", "alis, n", "животное"],
+      ["chiasma", "atis, n", "перекрест"],
+      ["Codeinum", "i, n", "кодеин"],
+      ["corpus", "oris, n", "тело"],
+      ["diaphragma", "atis, n", "диафрагма"],
+      ["fel", "fellis, n", "желчь"],
+      ["glomus", "eris, n", "клубочек"],
+      ["hepar", "atis, n", "печень (анат., клин.)"],
+      ["hydrocarbonas", "atis, m", "гидрокарбонат"],
+      ["iecur", "oris, n", "печень (фарм.)"],
+      ["oleum iecoris (Aselli)", "", "рыбий жир"],
+      ["lien", "enis, m", "селезенка"],
+      ["neoplasma", "atis, n", "новообразование"],
+      ["occiput", "itis, n", "затылок"],
+      ["oedema", "atis, n", "отёк"],
+      ["pectus", "oris, n", "грудь"],
+      ["pus", "puris, n", "гной"],
+      ["ren", "renis, m", "почка"],
+      ["rete", "is, n", "сеть"],
+      ["Secale", "is, n", "рожь"],
+      ["Secale cornutum", "", "спорынья"],
+      ["semen", "inis, n", "семя"],
+      ["stroma", "atis, n", "остов"],
+      ["Strychninum", "i, n", "стрихнин"],
+      ["Sulfur", "uris, n", "сера"],
+      ["systema", "atis, n", "система"],
+      ["tegmen", "inis, n", "крыша"],
+      ["tempus", "oris, n", "висок"],
+      ["ulcus", "eris, n", "язва"],
+      ["viscus", "eris, n", "внутренний орган"],
+      ["vulnus", "eris, n", "рана"],
+      ["zygoma", "atis, n", "скула"],
+      ["gramma", "atis, n", "грамм"],
+      ["decigramma", "atis, n", "0,1 г"],
+      ["centigramma", "atis, n", "0,01 г"],
+      ["milligramma", "atis, n", "0.001 г"]
+    ]],
+    ["II сем · занятие 4", [
+      ["auris", "is, f", "ухо"],
+      ["bilis", "is, f", "желчь"],
+      ["calcar", "aris, n", "шпора"],
+      ["curatio", "onis, f", "лечение"],
+      ["cutis", "is, f", "кожа"],
+      ["Ephedrinum", "i, n", "эфедрин"],
+      ["Erythromycinum", "i, n", "эритромицин"],
+      ["Euphyllinum", "i, n", "эуфиллин"],
+      ["lac", "lactis, n", "молоко"],
+      ["pubis", "is, f", "лобок"],
+      ["arteriosus", "a, um", "артериальный"],
+      ["benignus", "a, um", "доброкачественный"],
+      ["contagiosus", "a, um", "заразный"],
+      ["cutaneus", "a, um", "кожный"],
+      ["lymphaticus", "a, um", "лимфатический"],
+      ["malignus", "a, um", "злокачественный"],
+      ["niger", "gra, grum", "чёрный"],
+      ["oleosus", "a, um", "масляный"],
+      ["osseus", "a, um", "костный"],
+      ["periculosus", "a, um", "опасный"],
+      ["praecipitatus", "a, um", "осаждённый"],
+      ["purus", "a, um", "чистый"],
+      ["sanus", "a, um", "здоровый"],
+      ["spirituosus", "a, um", "спиртовой"],
+      ["venosus", "a, um", "венозный"]
+    ]],
+    ["II сем · занятие 5", [
+      ["tuberculosis", "is, f", "туберкулёз"],
+      ["trauma", "atis, n", "повреждение, травма"],
+      ["febris", "is, f", "лихорадка"],
+      ["pelvis", "is, f", "таз"],
+      ["pertussis", "is, f", "коклюш"],
+      ["tabes", "is, f", "истощение"],
+      ["tussis", "is, f", "кашель"],
+      ["Iodum", "i, n", "йод"],
+      ["Phenoxymethylpenicillinum", "i, n", "феноксиметилпенициллин"],
+      ["Phthivazidum", "i, n", "фтивазид"],
+      ["Tanninum", "i, n", "танин"],
+      ["vitrum", "i, n", "склянка"]
+    ]],
+    ["II сем · занятие 6", [
+      ["abdominalis", "e", "брюшной"],
+      ["capillaris", "e", "капиллярный"],
+      ["cerebellaris", "e", "мозжечковый"],
+      ["cerebralis", "e", "мозговой"],
+      ["corticalis", "e", "корковый"],
+      ["ethmoidalis", "e", "решетчатый"],
+      ["generalis", "e", "общий"],
+      ["lumbalis", "e", "поясничный"],
+      ["mandibularis", "e", "нижнечелюстной"],
+      ["medullaris", "e", "спинномозговой, костномозговой"],
+      ["palmaris", "e", "ладонный"],
+      ["parietalis", "e", "1) париетальный, пристеночный; 2) теменной"],
+      ["pectoralis", "e", "грудной"],
+      ["pulmonalis", "e", "лёгочный"],
+      ["radialis", "e", "лучевой"],
+      ["rectalis", "e", "ректальный, прямокишечный"],
+      ["sphenoidalis", "e", "клиновидный"],
+      ["spinalis", "e", "спинномозговой"],
+      ["suprarenalis", "e", "надпочечный"],
+      ["talis", "e", "такой"],
+      ["tenuis", "e", "тонкий"],
+      ["ulnaris", "e", "локтевой"],
+      ["vaginalis", "e", "вагинальный, влагалищный"],
+      ["visceralis", "e", "висперальный, внутренностный"],
+      ["par", "paris", "парный, равный"],
+      ["impar", "imparis", "непарный, неравный"],
+      ["simplex", "icis", "простой"],
+      ["duplex", "icis", "двойной"],
+      ["teres", "teretis", "круглый"],
+      ["biceps", "cipitis", "двуглавый"],
+      ["triceps", "tricipitis", "трёхглавый"],
+      ["quadriceps", "cipitis", "четырёхглавый"],
+      ["recens", "ntis", "свежий"],
+      ["insufficientia", "ae, f", "недостаточность"],
+      ["tonsilla", "ae, f", "миндалина"]
+    ]],
+    ["II сем · занятие 7", [
+      ["abducens", "ntis", "отводящий"],
+      ["adjuvans", "ntis", "помогающий, вспомогательный"],
+      ["afferens", "ntis", "приносящий"],
+      ["alternans", "ntis", "переменный"],
+      ["ascendens", "ntis", "восходящий"],
+      ["communicans", "ntis", "соединяющий"],
+      ["constituens", "ntis", "формообразующий"],
+      ["corrigens", "ntis", "исправляющий"],
+      ["deficiens", "ntis", "исчезающий"],
+      ["deformans", "ntis", "деформирующий"],
+      ["descendens", "ntis", "нисходящий"],
+      ["efferens", "ntis", "выносящий"],
+      ["fluctuans", "ntis", "качающийся"],
+      ["imminens", "ntis", "угрожающий"],
+      ["incipiens", "ntis", "начинающийся"],
+      ["intermittens", "ntis", "перемежающийся"],
+      ["latens", "ntis", "скрытый"],
+      ["laxans", "ntis", "слабительный"],
+      ["migrans", "ntis", "блуждающий (о почве)"],
+      ["vagus", "a, um", "блуждающий (о нерве)"],
+      ["obliterans", "ntis", "облитерирующий"],
+      ["opponens", "ntis", "противопоставляющий"],
+      ["perforans", "ntis", "прободающий"],
+      ["penetrans", "ntis", "проникающий"],
+      ["permanens", "ntis", "постоянный"],
+      ["prominens", "ntis", "выступающий"],
+      ["recipiens", "ntis", "получающий"],
+      ["recurrens", "ntis", "возвратный"],
+      ["tremens", "ntis", "дрожательный, дрожащий"],
+      ["uterus", "i, m", "матка"],
+      ["Adrenalinum", "i, n", "адреналин"],
+      ["oxydum", "i, n", "окись"],
+      ["peroxydum", "i, n", "перекись, пероксид"],
+      ["Plumbum", "i, n", "свинец"],
+      ["Zincum", "i, n", "цинк"],
+      ["immobilis", "e", "неподвижный"],
+      ["mobilis", "e", "подвижный"],
+      ["incurabilis", "e", "неизлечимый"],
+      ["curabilis", "e", "излечимый"],
+      ["inoperabilis", "e", "неоперабельный"],
+      ["operabilis", "e", "операбельный"]
+    ]],
+    ["II сем · занятие 8", [
+      ["caninus", "a, um", "собачий, клыковый"],
+      ["cavus", "a, um", "полый"],
+      ["exanthematicus", "a, um", "сыпной"],
+      ["ischiadicus", "a, um", "седалищный"],
+      ["isotonicus", "a, um", "изотонический"],
+      ["laryngeus", "a, um", "гортанный"],
+      ["mucosus", "a, um", "слизистый"],
+      ["pharyngeus", "a, um", "глоточный"],
+      ["sacrococcygeus", "a, um", "крестцово-копчиковый"],
+      ["squamosus", "a, um", "чешуйчатый"],
+      ["supremus", "a, um", "наивысший"],
+      ["trapezoideus", "a, um", "трапецевидный"],
+      ["lacrimalis", "e", "слезный"],
+      ["subtilis", "e", "мелкий, тонкий"],
+      ["neonatus", "i, m", "новорождённый"],
+      ["typhus", "i, m", "тиф"],
+      ["Hydrargyrum", "i, n", "ртуть"],
+      ["Hydrogenium", "i, n", "водород"],
+      ["Magnium", "ii, n", "магний"],
+      ["Nystatinum", "i, n", "нистатин"],
+      ["Oleandomycinum", "i, n", "олеандомицин"],
+      ["Oxacillinum-natrium", "ii, n", "оксациллин-натрий"],
+      ["Tetracyclinum", "i, n", "тетрациклин"],
+      ["quantum satis", "", "сколько нужно"]
+    ]],
+    ["II сем · занятие 9", [
+      ["bonus", "a, um", "хороший"],
+      ["melior", "melius", "лучший"],
+      ["optimus", "a, um", "наилучший"],
+      ["malus", "a, um", "плохой"],
+      ["pejor", "pejus", "худший"],
+      ["pessimus", "a, um", "наихудший"],
+      ["magnus", "a, um", "большой"],
+      ["major", "jus", "больший"],
+      ["maximus", "a, um", "наибольший"],
+      ["parvus", "a, um", "малый"],
+      ["minor", "minus", "меньший"],
+      ["minimus", "a, um", "наименьший"]
+    ]],
+    ["II сем · занятие 10", [
+      ["bulbus", "i, m", "луковица"],
+      ["cachexia", "ae, f", "кахексия, тяжёлое истощение"],
+      ["combustio", "onis, f", "ожог"],
+      ["commotio cerebri", "", "сотрясение мозга"],
+      ["congelatio", "onis, f", "обморожение"],
+      ["diabetes", "ae, m", "диабет, мочеизнурение"],
+      ["diabetes mellitus", "", "сахарный диабет"],
+      ["diabetes insipidus", "", "несахарный диабет"],
+      ["hernia", "ae, f", "грыжа"],
+      ["incarceratio", "onis, f", "ущемление"],
+      ["mamma", "ae, f", "молочная железа"],
+      ["meniscus", "i, m", "мениск; фиброзное хрящевое полукольцо в коленном суставе"],
+      ["ruptura", "ae, f", "разрыв"],
+      ["suppuratio", "onis, f", "нагноение"],
+      ["trepanatio", "onis, f", "трепанация (вскрытие костной полости)"],
+      ["vulnus caesum", "", "рубленая рана"],
+      ["vulnus conquassatum", "", "размозжённая рана"],
+      ["vulnus contusum", "", "ушибленная рана"],
+      ["vulnus incisum", "", "резаная рана"],
+      ["vulnus laceratum", "", "рваная рана"],
+      ["vulnus morsum", "", "укушенная рана"],
+      ["vulnus punctum", "", "колотая рана"],
+      ["vulnus sclopetarium", "", "огнестрельная рана"],
+      ["vulnus venenatum", "", "отравленная рана"]
+    ]],
+    ["II сем · занятие 12", [
+      ["-aesthes-", "", "обезболевание, анестетик"],
+      ["-barb-", "", "барбитураты, снотворные, производные барбитуровой кислоты"],
+      ["-cain-", "", "местнообезболевающее"],
+      ["-chol-", "", "желчегонное"],
+      ["-cid-", "", "антимикробное, противопаразитарное (букв. : убивать)"],
+      ["-cor-, -card-", "", "сердечное"],
+      ["-cort(ic)-", "", "кортикостероиды – гормоны коры надпочечников"],
+      ["-dol-, alg-", "", "болеутоляющее, анальгетик"],
+      ["-myc-", "", "противогрибковое"],
+      ["-oestr-", "", "препараты женских половых гормонов"],
+      ["-pres(s)-, -tens-", "", "гипотензивное"],
+      ["-pyr-", "", "жаропонижающее, антипиретик"],
+      ["-sed-", "", "успокаивающее"],
+      ["-sept-", "", "обеззараживающее, антисептик"],
+      ["-sulfa-", "", "антимикробные, сульфаниламиды"],
+      ["-test-, vir-, stan-, -ster-, andr-", "", "препарат мужских половых гормонов"],
+      ["-thyr- (tyr-, tir-)", "", "средство, влияющее на функцию щитовидной железы"],
+      ["-vas-, -angi-", "", "сосудорасширяющее, спазмолитик"],
+      ["-as-", "", "суффикс в названиях ферментных препаратов"]
+    ]],
+    ["II сем · занятие 14", [
+      ["bradys", "", "медленный"],
+      ["crino", "", "выделяю"],
+      ["ectasia", "", "расширение"],
+      ["genesis (gen)", "", "рождение, образование"],
+      ["geront", "", "старость"],
+      ["hist", "", "ткань"],
+      ["iater", "", "врач"],
+      ["iatria", "", "врачевание"],
+      ["kinesis", "", "движение"],
+      ["lip(os)", "", "жир"],
+      ["lith(us)", "", "камень"],
+      ["macro", "", "большой"],
+      ["malacia", "", "размягчение"],
+      ["meso", "", "средний"],
+      ["meta", "", "переход"],
+      ["micro", "", "малый"],
+      ["opsis (optic)", "", "зрение"],
+      ["orth(os)", "", "прямой, правильный"],
+      ["paedia", "", "воспитание"],
+      ["paedi(on)", "", "дитя"],
+      ["penia", "", "недостаток, бедность"],
+      ["pexia", "", "прикрепление, фиксация"],
+      ["phagia", "", "глотание"],
+      ["phagos", "", "пожиратель"],
+      ["philia", "", "склонность"],
+      ["phobia", "", "боязнь"],
+      ["phyt (on)", "", "растение"],
+      ["plastica", "", "пластическая операция"],
+      ["poësis", "", "творение, созидание"],
+      ["poli(os)", "", "серый"],
+      ["psyche", "", "душа"],
+      ["ptosis", "", "опущение"],
+      ["pyel", "", "почечная лоханка"],
+      ["scleros", "", "затвердение"],
+      ["scopia", "", "исследование"],
+      ["spasm(us)", "", "судорога, спазм"],
+      ["stasis (stat)", "", "неподвижность, остановка, состояние"],
+      ["stenos", "", "сжатый, узкий"],
+      ["sthenia", "", "сила"],
+      ["tachys", "", "быстрый"],
+      ["thromb(os)", "", "тромб, сгусток"],
+      ["toxic", "", "яд"]
+    ]]
+  ];
+  var EXPRESSIONS = [
+    ["Non est medicina sine lingua Latina", "нет медицины без латинского языка", "I сем · занятие 1"],
+    ["Scientia potentia est", "знание — сила", "I сем · занятие 1"],
+    ["Terra incognita", "неведомая земля", "I сем · занятие 2"],
+    ["Est modus in rebus", "есть мера в вещах (делах), всему есть мера", "I сем · занятие 2"],
+    ["Non progredi est regredi", "не идти вперёд, значит идти назад", "I сем · занятие 2"],
+    ["Circulus vitiosus", "замкнутый круг", "I сем · занятие 3"],
+    ["Tabula rasa", "чистая доска", "I сем · занятие 3"],
+    ["Curriculum vitae", "путь жизни (биография)", "I сем · занятие 3"],
+    ["Amicus certus in re incerta cernitur", "верный друг познаётся в несчастье", "I сем · занятие 3"],
+    ["Alma mater", "кормящая мать, мать-кормилица (почтительно об учебном заведении)", "I сем · занятие 4"],
+    ["Frontis nulla fides", "наружность обманчива", "I сем · занятие 4"],
+    ["Contra vim mortis non est medicamen in hortis", "против силы смерти нет лекарства в садах", "I сем · занятие 4"],
+    ["Conditio sine qua non", "необходимое условие", "I сем · занятие 5"],
+    ["Vita brevis, ars longa", "жизнь коротка, искусство вечно", "I сем · занятие 5"],
+    ["Status communis", "общее состояние", "I сем · занятие 5"],
+    ["Locus minoris resistentiae", "место наименьшего сопротивления", "I сем · занятие 6"],
+    ["A posteriori", "из последующего; исходя из опыта, на основании опыта", "I сем · занятие 6"],
+    ["Qui nimis propere, minus prospere", "поспешишь — людей насмешишь", "I сем · занятие 6"],
+    ["Pro die", "на день; суточная порция лекарства", "I сем · занятие 8"],
+    ["In charta carata (paraffinata)", "В вощёной (парафинированной) бумаге", "I сем · занятие 8"],
+    ["In capsulis gelatinosis (amylaceis)", "В желатиновых (крахмальных) капсулах", "I сем · занятие 8"],
+    ["Facies Hippocratica", "маска Гиппократа, лицо умирающего", "I сем · занятие 8"],
+    ["In medias res", "В самую суть дела", "I сем · занятие 8"],
+    ["Da tales doses Numero 10", "выдай такие дозы числом 10", "I сем · занятие 9"],
+    ["Nota bene!", "обрати внимание!", "I сем · занятие 9"],
+    ["Noli nocere!", "не навреди!", "I сем · занятие 9"],
+    ["Medica mente, non medicamentis", "лечи умом, а не медикаментами", "I сем · занятие 9"],
+    ["Medice, cura aegrotum, sed non morbum", "врач, лечи больного, а не болезнь", "I сем · занятие 9"],
+    ["In vivo", "В живом организме (на живом организме)", "I сем · занятие 10"],
+    ["In vitro", "В склянке (т.е. в лабораторных условиях)", "I сем · занятие 10"],
+    ["In vitro nigro", "В черной склянке", "I сем · занятие 10"],
+    ["Senectus insanabilis morbus est", "старость — неизлечимая болезнь", "I сем · занятие 10"],
+    ["Dentur tales doses", "выдать такие дозы … Пусть будут выданы такие дозы …", "I сем · занятие 11"],
+    ["Bene dignoscitur, bene curatur", "хорошо распознаётся, хорошо лечится", "I сем · занятие 11"],
+    ["Edimus ut vivamus, non vivimus ut edamus", "мы едим, чтобы жить, а не живем, чтобы есть", "I сем · занятие 11"],
+    ["Natura sanat, medicus curat morbos", "лечит болезни врач, но излечивает природа (Гиппократ)", "I сем · занятие 11"],
+    ["Mollities corpus debilitat", "изнеженность расслабляет тело", "I сем · занятие 11"],
+    ["Exitus letalis", "смертельный исход", "I сем · занятие 12"],
+    ["Ex libris", "книжный знак, экслибрис", "I сем · занятие 12"],
+    ["Lapsus linguae", "ошибка языка, оговорка", "I сем · занятие 12"],
+    ["Status idem", "то же самое состояние", "I сем · занятие 12"],
+    ["Status praesens", "настоящее состояние", "I сем · занятие 12"],
+    ["Status quo", "неизменное состояние", "I сем · занятие 12"],
+    ["Pro usu interno (externo, proprio)", "для внутреннего (наружного, собственного) применения; то же: ad usum internum (externum, proprium)", "I сем · занятие 12"],
+    ["Per os", "через рот", "II сем · занятие 1"],
+    ["Per rectum", "через прямую кишку", "II сем · занятие 1"],
+    ["Pia mater", "мягкая мозговая оболочка", "II сем · занятие 1"],
+    ["Dura mater", "твёрдая мозговая оболочка", "II сем · занятие 1"],
+    ["Pro auctore", "для автора", "II сем · занятие 1"],
+    ["Doctor honoris causa (D. h. c.)", "почётный доктор", "II сем · занятие 1"],
+    ["Labor omnia vincit", "труд венчает всё", "II сем · занятие 1"],
+    ["Aurea mediocritas", "золотая середина", "II сем · занятие 2"],
+    ["Consuetudo est altera natura", "привычка — вторая натура", "II сем · занятие 2"],
+    ["Notae inflammationis sunt quattuor: rubor et tumor cum calore et dolore", "существует четыре признака воспаления: краснота и опухоль с жаром и болью", "II сем · занятие 2"],
+    ["In dragee", "В драже", "II сем · занятие 3"],
+    ["In tabulettis obductis", "В таблетках, покрытых оболочкой", "II сем · занятие 3"],
+    ["Mens sana in corpore sano", "здоровый дух в здоровом теле", "II сем · занятие 3"],
+    ["Tempus vulnera sanat", "время лечит раны", "II сем · занятие 3"],
+    ["Ubi mel, ibi fel", "нет розы без шипов", "II сем · занятие 3"],
+    ["Omnia praeclara rara", "всё прекрасное редко", "II сем · занятие 3"],
+    ["Quot homines tot sententiae", "сколько людей, столько и чувств", "II сем · занятие 3"],
+    ["O tempora, o mores!", "о времена, о нравы!", "II сем · занятие 3"],
+    ["Homo sapiens", "человек разумный", "II сем · занятие 4"],
+    ["Lege artis", "по всем правилам искусства", "II сем · занятие 4"],
+    ["Sancta sanctorum", "святая святых", "II сем · занятие 4"],
+    ["Pigritia mater vitiorum", "лень — мать всех пороков", "II сем · занятие 4"],
+    ["Litterarum radices amarae, fructus dulces", "корни науки горьки, плоды сладки", "II сем · занятие 4"],
+    ["Pro dosi", "на приём", "II сем · занятие 5"],
+    ["Pro narcosi", "для наркоза", "II сем · занятие 5"],
+    ["Contra tussim (febrim)", "от кашля, против лихорадки", "II сем · занятие 5"],
+    ["In vitro nigro", "В чёрной склянке", "II сем · занятие 5"],
+    ["Anamnesis morbi", "припоминание обстоятельств болезни", "II сем · занятие 5"],
+    ["Anamnesis vitae", "припоминание обстоятельств жизни больного", "II сем · занятие 5"],
+    ["Usus est optimus magister", "опыт — наилучший учитель", "II сем · занятие 5"],
+    ["Summum bonum medicinae sanitas", "высшее благо медицины — здоровье", "II сем · занятие 5"],
+    ["Qualis vita, finis ita", "какова жизнь, таков и конец", "II сем · занятие 5"],
+    ["Divide et impera", "разделяй и властвуй", "II сем · занятие 6"],
+    ["Ignorantia non est argumentum", "незнание не есть довод", "II сем · занятие 6"],
+    ["Optimum medicamentum quies est", "наилучшее лекарство — покой", "II сем · занятие 6"],
+    ["Restitutio ad integrum", "восстановление до неповреждённого состояния", "II сем · занятие 7"],
+    ["Restitutio anatomica", "анатомическое восстановление", "II сем · занятие 7"],
+    ["Restitutio functionalis", "восстановление функции", "II сем · занятие 7"],
+    ["Praesente medico nihil nocet", "В присутствии врача ничего не вредит", "II сем · занятие 7"],
+    ["Absente aegroto", "В отсутствии больного", "II сем · занятие 7"],
+    ["Loco dolenti", "В больной точке", "II сем · занятие 7"],
+    ["Pro injectionibus", "для инъекций", "II сем · занятие 8"],
+    ["Diagnosis ex juvantibus", "диагноз на основании помогающих средств", "II сем · занятие 8"],
+    ["Non multa sed multum", "не много, но многое", "II сем · занятие 8"],
+    ["Salus populi suprema lex", "здоровье народа — наивысший закон", "II сем · занятие 8"],
+    ["Nec quisquam melior medicus, quam fidus amicus", "нет лучшего врача, чем верный друг", "II сем · занятие 8"],
+    ["Citius, altius, fortius!", "быстрее, выше, сильнее!", "II сем · занятие 8"],
+    ["Opera et studio", "трудом и старанием", "II сем · занятие 9"],
+    ["Cogito, ergo sum", "мыслю, следовательно, существую", "II сем · занятие 9"],
+    ["Totus de capsula", "весь от ящичка (т.е. : одет с иголочки)", "II сем · занятие 10"],
+    ["Per primam aut per secundam intentionem", "первичным или вторичным натяжением", "II сем · занятие 10"],
+    ["Mala herba cito crescit", "дурная трава быстро растёт", "II сем · занятие 12"]
+  ];
+  function makeCourse() {
+    var out = [];
+    LESSONS.forEach(function (L, li) {
+      L[1].forEach(function (r, i) {
+        out.push({ id: "c" + li + "-" + i, la: r[0], info: r[1], ru: r[2], tag: L[0], box: 0, due: 0 });
+      });
+    });
+    EXPRESSIONS.forEach(function (r, i) {
+      out.push({ id: "e" + i, la: r[0], info: "", ru: r[1], tag: r[2], box: 0, due: 0 });
+    });
+    return out;
+  }
+  function cardKey(c) { return String(c.tag || "") + "|" + String(c.la).toLowerCase() + "|" + String(c.ru).toLowerCase(); }
+  function wordKey(c) { return String(c.la).toLowerCase() + "|" + String(c.info || "").toLowerCase() + "|" + String(c.ru).toLowerCase(); }
+  function migrate(ver) {
+    var progress = {};
+    if (ver < 2) {
+      var oldKeys = {};
+      OLD_STARTER.forEach(function (r) { oldKeys[r[0].toLowerCase() + "|" + r[2].toLowerCase()] = 1; });
+      cards = cards.filter(function (c) {
+        if (!c.tag && oldKeys[String(c.la).toLowerCase() + "|" + String(c.ru).toLowerCase()]) { progress[String(c.la).toLowerCase()] = c; return false; }
+        return true;
+      });
+    }
+    if (ver < 4) {
+      var exprTag = {};
+      EXPRESSIONS.forEach(function (r) { if (!exprTag[r[0].toLowerCase()]) exprTag[r[0].toLowerCase()] = r[2]; });
+      cards.forEach(function (c) {
+        var m = /^Занятие (\d+)$/.exec(c.tag || "");
+        if (m) c.tag = "I сем · занятие " + m[1];
+        else if (c.tag === "Выражения") c.tag = exprTag[String(c.la).toLowerCase()] || c.tag;
+      });
+    }
+    var have = {};
+    cards.forEach(function (c) { if (!have[cardKey(c)]) have[cardKey(c)] = c; });
+    var used = {}, ids = {};
+    var merged = makeCourse().map(function (c) {
+      var e = have[cardKey(c)];
+      if (e) { used[e.id] = 1; return e; }
+      var p = progress[c.la.toLowerCase()];
+      if (p) { c.box = p.box; c.due = p.due; }
+      return c;
+    });
+    var rest = cards.filter(function (c) { return !used[c.id]; });
+    cards = merged.concat(rest);
+    cards.forEach(function (c) { if (ids[c.id]) c.id = uid(); ids[c.id] = 1; });
+    save();
+  }
+  var filter = "all";
+  var fullForm = false;
+  var spDirty = false;
+
+  var cards = [];
+  var reverse = false;     // false: латынь → русский
+  var session = [];        // очередь id в текущем подходе
+  var done = 0, total = 0, wrongCount = 0;
+  var shown = false;       // показан ли ответ
+  var tab = "study";
+  var flashMsg = "";
+
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && Array.isArray(d.cards)) {
+          cards = d.cards; reverse = !!d.reverse; filter = d.filter || "all"; fullForm = !!d.full;
+          if ((d.ver || 1) < 4) migrate(d.ver || 1);
+          return;
+        }
+      }
+    } catch (e) {}
+    cards = makeCourse();
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify({ ver: 4, cards: cards, reverse: reverse, filter: filter, full: fullForm })); } catch (e) {}
+  }
+
+  function byId(id) { for (var i = 0; i < cards.length; i++) if (cards[i].id === id) return cards[i]; return null; }
+  function shuffle(a) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  function uniq(list) {
+    var seen = {};
+    return list.filter(function (c) { var k = wordKey(c); if (seen[k]) return false; seen[k] = 1; return true; });
+  }
+  function pool() {
+    if (filter === "all") return uniq(cards);
+    if (filter === "__miss") return uniq(cards.filter(function (c) { return c.miss > 0; }));
+    return cards.filter(function (c) {
+      if (filter === "mine") return !c.tag;
+      return c.tag === filter;
+    });
+  }
+  function tagList() {
+    var tags = [];
+    cards.forEach(function (c) { var t = c.tag || "mine"; if (tags.indexOf(t) < 0) tags.push(t); });
+    return tags;
+  }
+  function tagName(t) { return t === "mine" ? "Мои слова" : t; }
+  function dueCards() { var now = Date.now(); return pool().filter(function (c) { return c.due <= now; }); }
+  function tagTitle(t) {
+    var m = /^(I{1,2}) сем · (.+)$/.exec(t);
+    return m ? m[2].charAt(0).toUpperCase() + m[2].slice(1) : tagName(t);
+  }
+  function filterSelect() {
+    var tags = tagList();
+    var missN = uniq(cards.filter(function (c) { return c.miss > 0; })).length;
+    if (filter === "__miss" && !missN) filter = "all";
+    if (filter !== "all" && filter !== "__miss" && tags.indexOf(filter) < 0) filter = "all";
+    function opt(val, label) { return '<option value="' + esc(val) + '"' + (filter === val ? " selected" : "") + '>' + esc(label) + '</option>'; }
+    function count(t) { return cards.filter(function (c) { return (c.tag || "mine") === t; }).length; }
+    var html = '<div class="dir" style="margin-bottom:10px"><label for="flt" style="margin:0">Что учим</label><select id="flt">' +
+      opt("all", "Всё (" + uniq(cards).length + ")");
+    [["I сем", "I семестр"], ["II сем", "II семестр"]].forEach(function (g) {
+      var list = tags.filter(function (t) { return t.indexOf(g[0] + " ·") === 0; });
+      if (!list.length) return;
+      html += '<optgroup label="' + g[1] + '">' + list.map(function (t) { return opt(t, tagTitle(t) + " (" + count(t) + ")"); }).join("") + '</optgroup>';
+    });
+    var other = tags.filter(function (t) { return !/^II? сем ·/.test(t); });
+    other.forEach(function (t) { html += opt(t, tagName(t) + " (" + count(t) + ")"); });
+    if (missN) html += opt("__miss", "С ошибками (" + missN + ")");
+    return html + '</select></div>';
+  }
+  function bindFilter() {
+    var f = document.getElementById("flt");
+    if (f) f.onchange = function () { filter = f.value; save(); startSession(false); startSpelling(); render(); };
+  }
+
+  function startSession(all) {
+    var src = all ? pool().slice() : dueCards();
+    session = shuffle(src).map(function (c) { return c.id; });
+    total = session.length; done = 0; wrongCount = 0; shown = false;
+  }
+
+  function answer(ok) {
+    var id = session.shift();
+    var c = byId(id);
+    if (c) {
+      if (ok) {
+        c.box = Math.min(c.box + 1, MAX_BOX);
+        c.due = Date.now() + INTERVALS[c.box] * DAY;
+        done++;
+      } else {
+        c.box = 0;
+        c.due = Date.now() + 10 * 60000;
+        session.push(id);
+        wrongCount++;
+      }
+    }
+    shown = false;
+    save();
+    render();
+  }
+
+  function flip() {
+    if (!session.length) return;
+    shown = !shown;
+    render(true);
+  }
+
+  var statsEl = document.getElementById("stats");
+  var view = document.getElementById("view");
+
+  function renderStats() {
+    var learned = cards.filter(function (c) { return c.box >= MAX_BOX; }).length;
+    statsEl.textContent = "Карточек: " + uniq(cards).length + " · выучено: " + uniq(cards).filter(function (c) { return c.box >= MAX_BOX; }).length;
+  }
+
+  function renderStudy(animate) {
+    if (!cards.length) {
+      view.innerHTML = '<div class="empty"><h2>Пока нет слов</h2><p>Добавь слова на вкладке «Мои слова».</p></div>';
+      return;
+    }
+    if (!session.length) {
+      var due = dueCards().length;
+      var html = '<div class="empty">';
+      if (total > 0 && done > 0) {
+        html += '<h2>Подход закончен</h2><p>Выучено в этом подходе: ' + done + '. Ошибок: ' + wrongCount + '.</p>';
+      } else if (due === 0) {
+        html += '<h2>На сегодня всё</h2><p>Все слова повторены. Следующие появятся по расписанию.</p>';
+      } else {
+        html += '<h2>Готов?</h2><p>К повторению сейчас: ' + due + '.</p>';
+      }
+      if (due > 0) html += '<button class="btn primary" id="go-due">Повторить (' + due + ')</button>';
+      html += '<button class="btn" id="go-all">Пройти всю колоду</button></div>';
+      view.innerHTML = filterSelect() + html;
+      bindFilter();
+      var d = document.getElementById("go-due"); if (d) d.onclick = function () { startSession(false); render(); };
+      document.getElementById("go-all").onclick = function () { startSession(true); render(); };
+      return;
+    }
+    var c = byId(session[0]);
+    var pct = total ? Math.round((done / total) * 100) : 0;
+    var front, back;
+    if (!reverse) {
+      front = '<div class="main' + (c.la.length > 16 ? ' long' : '') + '">' + esc(c.la) + '</div>' + (c.info ? '<div class="info">' + esc(c.info) + '</div>' : '');
+    } else {
+      front = '<div class="main ru">' + esc(c.ru) + '</div>';
+    }
+    var body;
+    if (!shown) {
+      body = front + '<div class="hint">Нажми, чтобы увидеть ответ</div>';
+    } else if (!reverse) {
+      body = front + '<div class="sub"><div class="main ru" style="font-size:1.6rem">' + esc(c.ru) + '</div></div>';
+    } else {
+      body = front + '<div class="sub"><div class="la">' + esc(c.la) + '</div>' + (c.info ? '<div class="info" style="margin-top:4px">' + esc(c.info) + '</div>' : '') + '</div>';
+    }
+    var html2 =
+      filterSelect() + '<div class="dir"><span>Осталось: ' + session.length + '</span>' +
+      '<button id="dir-btn">' + (reverse ? 'Русский → латынь' : 'Латынь → русский') + '</button></div>' +
+      '<div class="progress" aria-hidden="true"><div style="width:' + pct + '%"></div></div>' +
+      '<div class="card' + (animate ? ' flip' : '') + '" id="card" tabindex="0" role="button" aria-label="Перевернуть карточку">' + body + '</div>' +
+      '<div class="answers">' +
+        '<button class="btn bad" id="no"' + (shown ? '' : ' disabled') + '>Не знаю</button>' +
+        '<button class="btn good" id="yes"' + (shown ? '' : ' disabled') + '>Знаю</button>' +
+      '</div>' +
+      '<div class="kbd">Пробел — перевернуть · 1 — не знаю · 2 — знаю</div>';
+    view.innerHTML = html2;
+    bindFilter();
+    document.getElementById("card").onclick = flip;
+    document.getElementById("yes").onclick = function () { if (shown) answer(true); };
+    document.getElementById("no").onclick = function () { if (shown) answer(false); };
+    document.getElementById("dir-btn").onclick = function () { reverse = !reverse; shown = false; save(); render(); };
+  }
+
+  function boxLabel(b) { return b >= MAX_BOX ? "выучено" : "уровень " + b; }
+
+  function renderDeck() {
+    var html = '';
+    html += '<section class="panel"><h2 class="sec">Добавить слово</h2>' +
+      '<label for="f-la">Латинское слово</label><input type="text" id="f-la" autocomplete="off" autocapitalize="off">' +
+      '<div class="row"><div><label for="f-info">Родительный падеж, род</label><input type="text" id="f-info" placeholder="capitis, n" autocomplete="off" autocapitalize="off"></div>' +
+      '<div><label for="f-ru">Перевод</label><input type="text" id="f-ru" autocomplete="off"></div></div>' +
+      '<div style="margin-top:12px"><button class="btn primary" id="add">Добавить</button></div>' +
+      '<div class="msg" id="msg-add" role="status"></div></section>';
+
+    html += '<section class="panel"><h2 class="sec">Вставить списком</h2>' +
+      '<label for="bulk">По одному слову в строке</label>' +
+      '<textarea id="bulk" placeholder="caput | capitis, n | голова&#10;vena — вена"></textarea>' +
+      '<div class="help">Формат: <b>слово | родительный, род | перевод</b> или короче: <b>слово — перевод</b>.</div>' +
+      '<button class="btn" id="import">Добавить из списка</button>' +
+      '<div class="msg" id="msg-imp" role="status"></div></section>';
+
+    html += '<section class="panel"><h2 class="sec">Все слова (' + cards.length + ')</h2>';
+    if (cards.length) {
+      html += '<div class="list">' + cards.map(function (c) {
+        return '<div class="item"><div class="t"><b>' + esc(c.la) + '</b>' + (c.info ? ' <i>' + esc(c.info) + '</i>' : '') +
+          '<div>' + esc(c.ru) + '</div></div><span class="box">' + (c.tag ? esc(tagTitle(c.tag)) + ' · ' : '') + boxLabel(c.box) + (c.miss ? ' · ошибок: ' + c.miss : '') + '</span>' +
+          '<button data-del="' + c.id + '" aria-label="Удалить слово ' + esc(c.la) + '">Удалить</button></div>';
+      }).join('') + '</div>';
+    } else {
+      html += '<p class="help">Список пуст.</p>';
+    }
+    html += '<div style="margin-top:12px"><button class="danger" id="reset-progress">Сбросить прогресс</button> ' +
+      '&nbsp; <button class="danger" id="reset-all">Вернуть слова курса</button></div></section>';
+    html += '<section class="panel"><h2 class="sec">О приложении</h2>' +
+      '<div class="help" style="font-size:.875rem;line-height:1.55">' +
+      'Слова и выражения взяты из пособия «Latina medica» (СамГМУ, 2023), лексические минимумы занятий I и II семестров. ' +
+      'Очевидные опечатки пособия исправлены (например, squama, vertebra). Слова из практических заданий без перевода не включены.<br><br>' +
+      'Прогресс хранится только в этом браузере на этом устройстве. Если очистить данные сайта, он пропадёт.<br><br>' +
+      '<b>Как поставить на экран телефона.</b> iPhone: Safari → «Поделиться» → «На экран “Домой”». Android: Chrome → меню ⋯ → «Добавить на главный экран».' +
+      '</div></section>';
+    view.innerHTML = html;
+
+    var msgAdd = document.getElementById("msg-add");
+    document.getElementById("add").onclick = function () {
+      var la = document.getElementById("f-la").value.trim();
+      var info = document.getElementById("f-info").value.trim();
+      var ru = document.getElementById("f-ru").value.trim();
+      if (!la || !ru) { msgAdd.className = "msg err"; msgAdd.textContent = "Заполни латинское слово и перевод."; return; }
+      cards.push({ id: uid(), la: la, info: info, ru: ru, box: 0, due: 0 });
+      save(); session = []; total = 0; done = 0; spDirty = true;
+      flashMsg = "Добавлено: " + la;
+      render();
+    };
+
+    document.getElementById("import").onclick = function () {
+      var txt = document.getElementById("bulk").value;
+      var lines = txt.split(/\r?\n/);
+      var added = 0;
+      lines.forEach(function (line) {
+        line = line.trim(); if (!line) return;
+        var parts;
+        if (line.indexOf("|") >= 0) parts = line.split("|");
+        else if (line.indexOf("\t") >= 0) parts = line.split("\t");
+        else parts = line.split(/\s+[—–-]\s+/);
+        parts = parts.map(function (p) { return p.trim(); });
+        var la, info = "", ru;
+        if (parts.length >= 3) { la = parts[0]; info = parts[1]; ru = parts.slice(2).join(" "); }
+        else if (parts.length === 2) { la = parts[0]; ru = parts[1]; }
+        if (la && ru) { cards.push({ id: uid(), la: la, info: info, ru: ru, box: 0, due: 0 }); added++; }
+      });
+      var m = document.getElementById("msg-imp");
+      if (!added) { m.className = "msg err"; m.textContent = "Не удалось разобрать строки. Проверь формат."; return; }
+      save(); session = []; total = 0; done = 0; spDirty = true;
+      flashMsg = "Добавлено слов: " + added;
+      render();
+    };
+
+    Array.prototype.forEach.call(view.querySelectorAll("[data-del]"), function (b) {
+      b.onclick = function () {
+        var id = b.getAttribute("data-del");
+        cards = cards.filter(function (c) { return c.id !== id; });
+        session = session.filter(function (x) { return x !== id; }); spDirty = true;
+        save(); render();
+      };
+    });
+    document.getElementById("reset-progress").onclick = function () {
+      if (!confirm("Сбросить прогресс по всем словам?")) return;
+      cards.forEach(function (c) { c.box = 0; c.due = 0; c.miss = 0; });
+      session = []; total = 0; done = 0; spDirty = true; save(); render();
+    };
+    document.getElementById("reset-all").onclick = function () {
+      if (!confirm("Заменить все слова словами курса (занятия 1–4)? Добавленные тобой слова будут удалены.")) return;
+      cards = makeCourse(); filter = "all";
+      session = []; total = 0; done = 0; spDirty = true; save(); render();
+    };
+
+    if (flashMsg) {
+      var target = document.getElementById("msg-add");
+      target.className = "msg"; target.textContent = flashMsg; flashMsg = "";
+    }
+  }
+
+  // ---------- Проверка правописания ----------
+  var sp = { queue: [], total: 0, first: 0, tried: {}, mistakes: [], checked: false, ok: false, typed: "", cur: null, hint: 0, firstTry: false };
+
+  function fold(str) {
+    return String(str).toLowerCase().replace(/æ/g, "ae").replace(/œ/g, "oe").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }
+  function norm(str) {
+    return fold(str).replace(/[.,;:!?«»"“”()\u2014\u2013\-*]/g, " ").replace(/\s+/g, " ").trim();
+  }
+  function normNoParen(str) { return norm(String(str).replace(/\([^)]*\)/g, " ")); }
+  function sameText(a, b) { return norm(a) === norm(b) || normNoParen(a) === normNoParen(b); }
+  function targetOf(c) { return fullForm && c.info ? c.la + ", " + c.info : c.la; }
+
+  function startSpelling() {
+    sp = { queue: shuffle(pool().map(function (c) { return c.id; })), total: 0, first: 0, tried: {}, mistakes: [], checked: false, ok: false, typed: "", cur: null, hint: 0, firstTry: false };
+    sp.total = sp.queue.length;
+  }
+
+  function diffHtml(typed, target) {
+    var a = typed.split(""), b = target.split("");
+    var n = a.length, m = b.length, i, j;
+    var dp = [];
+    for (i = 0; i <= n; i++) { dp.push(new Array(m + 1).fill(0)); }
+    for (i = n - 1; i >= 0; i--) {
+      for (j = m - 1; j >= 0; j--) {
+        dp[i][j] = fold(a[i]) === fold(b[j]) ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+      }
+    }
+    var ma = new Array(n).fill(false), mb = new Array(m).fill(false);
+    i = 0; j = 0;
+    while (i < n && j < m) {
+      if (fold(a[i]) === fold(b[j])) { ma[i] = true; mb[j] = true; i++; j++; }
+      else if (dp[i + 1][j] >= dp[i][j + 1]) i++;
+      else j++;
+    }
+    var th = a.map(function (ch, k) { return ma[k] ? esc(ch) : '<span class="x">' + esc(ch === " " ? "\u00a0" : ch) + '</span>'; }).join("");
+    var ch2 = b.map(function (ch, k) { return mb[k] ? esc(ch) : '<span class="m">' + esc(ch === " " ? "\u00a0" : ch) + '</span>'; }).join("");
+    return { typed: th, target: ch2 };
+  }
+
+  function spCheck() {
+    var inp = document.getElementById("sp-in");
+    if (!inp || !inp.value.trim() || !sp.queue.length) return;
+    var c = byId(sp.queue[0]);
+    if (!c) return;
+    var target = targetOf(c);
+    sp.cur = c.id;
+    sp.typed = inp.value.trim();
+    sp.ok = sameText(sp.typed, target);
+    sp.checked = true;
+    sp.firstTry = !sp.tried[c.id];
+    sp.tried[c.id] = true;
+    if (sp.ok) {
+      if (sp.firstTry) { sp.first++; if (c.miss) c.miss = Math.max(0, c.miss - 1); }
+      sp.queue.shift();
+    } else {
+      c.miss = (c.miss || 0) + 1;
+      sp.mistakes.push({ id: c.id, target: target, typed: sp.typed });
+      sp.queue.push(sp.queue.shift());
+    }
+    save(); render();
+  }
+
+  function spOverride() {
+    var c = byId(sp.cur);
+    var k = sp.queue.lastIndexOf(sp.cur);
+    if (k >= 0) sp.queue.splice(k, 1);
+    sp.mistakes.pop();
+    if (c && c.miss) c.miss = Math.max(0, c.miss - 1);
+    if (sp.firstTry) sp.first++;
+    save(); spNext();
+  }
+
+  function spNext() { sp.checked = false; sp.typed = ""; sp.hint = 0; render(); }
+
+  function spHintText() {
+    var c = byId(sp.queue[0]); if (!c) return "";
+    var t = targetOf(c);
+    if (!sp.hint) return "";
+    return t.slice(0, Math.min(sp.hint, t.length)) + "… (" + t.replace(/[^A-Za-z]/g, "").length + " букв)";
+  }
+
+  function renderSpell() {
+    if (!cards.length) {
+      view.innerHTML = '<div class="empty"><h2>Пока нет слов</h2><p>Добавь слова на вкладке «Мои слова».</p></div>';
+      return;
+    }
+    var html = filterSelect() +
+      '<div class="dir"><label class="check"><input type="checkbox" id="sp-full"' + (fullForm ? ' checked' : '') +
+      '> Писать со словарной формой (ala, ae, f)</label></div>';
+
+    if (!sp.queue.length && !sp.checked) {
+      var missN = cards.filter(function (c) { return c.miss > 0; }).length;
+      html += '<div class="empty">';
+      if (!sp.total) {
+        html += '<h2>В этой подборке нет слов</h2><p>Выбери другую подборку выше.</p>';
+      } else {
+        html += '<h2>Готово</h2><p>С первой попытки: ' + sp.first + ' из ' + sp.total + '.</p>';
+        var seen = {}, list = '';
+        sp.mistakes.forEach(function (m) {
+          if (seen[m.id]) return; seen[m.id] = 1;
+          var c = byId(m.id);
+          list += '<div class="item"><div class="t"><b>' + esc(m.target) + '</b><div>' + (c ? esc(c.ru) : '') +
+            '</div><div>ты написал: ' + esc(m.typed) + '</div></div></div>';
+        });
+        if (list) html += '<div class="list" style="text-align:left;margin-bottom:16px">' + list + '</div>';
+      }
+      html += '<button class="btn primary" id="sp-again">Ещё раз</button>';
+      if (missN) html += '<button class="btn" id="sp-miss">Только слова с ошибками (' + missN + ')</button>';
+      html += '</div>';
+      view.innerHTML = html;
+      bindFilter(); bindFull();
+      var ag = document.getElementById("sp-again"); if (ag) ag.onclick = function () { startSpelling(); render(); };
+      var ms = document.getElementById("sp-miss"); if (ms) ms.onclick = function () { filter = "__miss"; save(); startSession(false); startSpelling(); render(); };
+      return;
+    }
+
+    var left = sp.queue.length;
+    if (!sp.checked) {
+      var c = byId(sp.queue[0]);
+      html += '<div class="dir"><span>Осталось: ' + left + '</span><span>' + (c.tag ? esc(c.tag) : 'Мои слова') + '</span></div>' +
+        '<div class="card static"><div class="hint" style="margin:0 0 12px">Напиши по-латыни</div>' +
+        '<div class="main ru">' + esc(c.ru) + '</div>' +
+        '<div class="hint" id="sp-hint" style="min-height:1.4em;font-family:var(--serif);font-size:1rem">' + esc(spHintText()) + '</div></div>' +
+        '<input type="text" id="sp-in" class="spin" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Латинское слово">' +
+        '<div class="answers"><button class="btn" id="sp-hintbtn">Подсказка</button><button class="btn primary" id="sp-check">Проверить</button></div>' +
+        '<div class="kbd">Enter — проверить</div>';
+      view.innerHTML = html;
+      bindFilter(); bindFull();
+      var inp = document.getElementById("sp-in");
+      inp.onkeydown = function (e) { if (e.key === "Enter") { e.preventDefault(); spCheck(); } };
+      document.getElementById("sp-check").onclick = spCheck;
+      document.getElementById("sp-hintbtn").onclick = function () {
+        sp.hint++;
+        document.getElementById("sp-hint").textContent = spHintText();
+      };
+      if (inp.focus) setTimeout(function () { inp.focus(); }, 0);
+    } else {
+      var cur = byId(sp.cur);
+      var target = cur ? targetOf(cur) : "";
+      var card;
+      if (sp.ok) {
+        card = '<div class="card static"><div class="verdict good">Верно</div>' +
+          '<div class="cmp">' + esc(target) + '</div>' +
+          '<div class="sub"><div style="color:var(--muted)">' + esc(cur ? cur.ru : '') + '</div></div></div>';
+      } else {
+        var df = diffHtml(sp.typed, target);
+        card = '<div class="card static"><div class="verdict bad">Есть ошибка</div>' +
+          '<div class="cmp"><small>Ты написал</small>' + df.typed + '</div>' +
+          '<div class="cmp"><small>Правильно</small>' + df.target + '</div>' +
+          '<div class="sub"><div style="color:var(--muted)">' + esc(cur ? cur.ru : '') + '</div></div></div>';
+      }
+      html += '<div class="dir"><span>Осталось: ' + left + '</span><span>' + (cur && cur.tag ? esc(cur.tag) : 'Мои слова') + '</span></div>' + card;
+      var nextLabel = left ? 'Дальше' : 'Закончить';
+      if (sp.ok) html += '<div style="margin-top:16px"><button class="btn primary" id="sp-next" style="width:100%">' + nextLabel + '</button></div>';
+      else html += '<div class="answers"><button class="btn" id="sp-ovr">Я был прав, засчитать</button><button class="btn primary" id="sp-next">' + nextLabel + '</button></div>';
+      view.innerHTML = html;
+      bindFilter(); bindFull();
+      var nx = document.getElementById("sp-next");
+      nx.onclick = spNext;
+      var ov = document.getElementById("sp-ovr"); if (ov) ov.onclick = spOverride;
+      if (nx.focus) setTimeout(function () { nx.focus(); }, 0);
+    }
+  }
+
+  function bindFull() {
+    var f = document.getElementById("sp-full");
+    if (f) f.onchange = function () { fullForm = f.checked; save(); startSpelling(); render(); };
+  }
+
+  function render(animate) {
+    renderStats();
+    document.getElementById("tab-study").setAttribute("aria-selected", tab === "study");
+    document.getElementById("tab-spell").setAttribute("aria-selected", tab === "spell");
+    document.getElementById("tab-deck").setAttribute("aria-selected", tab === "deck");
+    if (tab === "study") renderStudy(animate); else if (tab === "spell") renderSpell(); else renderDeck();
+  }
+
+  document.getElementById("tab-study").onclick = function () { tab = "study"; render(); };
+  document.getElementById("tab-spell").onclick = function () {
+    tab = "spell";
+    if (spDirty || (!sp.total && !sp.checked)) { startSpelling(); spDirty = false; }
+    render();
+  };
+  document.getElementById("tab-deck").onclick = function () { tab = "deck"; render(); };
+
+  document.addEventListener("keydown", function (e) {
+    if (tab !== "study" || !session.length) return;
+    var tag = (e.target && e.target.tagName) || "";
+    if (tag === "INPUT" || tag === "TEXTAREA") return;
+    if (e.key === " " || e.key === "Enter") {
+      if (tag === "BUTTON" && e.target.id !== "card") return;
+      e.preventDefault(); flip();
+    } else if (e.key === "1" && shown) { answer(false); }
+    else if (e.key === "2" && shown) { answer(true); }
+  });
+
+  load();
+  startSession(false);
+  render();
+})();
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("sw.js").catch(function () {});
+  });
+}
+</script>
+</body>
+</html>
